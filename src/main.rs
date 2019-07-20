@@ -99,8 +99,10 @@ fn main() {
 			Ok(Event::MessageCreate(message)) => {
 				println!("Message create event received");
 				if !message.content.starts_with(PREFIX) {
-					if (message.content.to_uppercase().starts_with("YAPAY ZEKA DEVREYE")) {
+					if message.content.to_uppercase().starts_with("YAPAY ZEKA DEVREYE") {
 						discord.send_message(message.channel_id, "tamam abi", "", false);
+					} else if message.content.starts_with("09") {
+						discord.send_message(message.channel_id, "HADİ SİK ONU GÖTÜNDEN", "", false);
 					}
 					store(SkyNetMsg{
 						msg: Message {
@@ -121,7 +123,6 @@ fn main() {
 							let _ = discord.send_message(message.channel_id, sentence.as_str(), "", false);
 						},
 						command if command.starts_with(format!("{} meme", PREFIX).as_str()) => {
-							println!("MEME");
 							discord.delete_message(message.channel_id, message.id);
 							let sentence = message.content.clone().split_off(format!("{} meme ", PREFIX).len());
 							let pf = memes.get(sentence.as_str());
