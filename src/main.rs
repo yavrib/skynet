@@ -126,6 +126,21 @@ fn main() {
 							let sentence = message.content.clone().split_off(format!("{} say ", PREFIX).len());
 							let _ = discord.send_message(message.channel_id, sentence.as_str(), "", false);
 						},
+						command if command.starts_with(format!("{} rulet", PREFIX).as_str()) => {
+							let sentence = message.content
+								.clone()
+								.split_off(format!("{} rulet ", PREFIX).len());
+
+							let channel = discord.get_channel(message.channel_id).unwrap();
+							println!("CHANNEL {:?}", channel);
+
+//							discord.kick_member()
+							let _ = discord.send_message(
+								message.channel_id,
+								sentence.as_str(),
+								"",
+								false);
+						},
 						command if command.starts_with(format!("{} meme", PREFIX).as_str()) => {
 							discord.delete_message(message.channel_id, message.id);
 							let sentence = message.content.clone().split_off(format!("{} meme ", PREFIX).len());
