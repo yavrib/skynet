@@ -51,6 +51,9 @@ fn main() {
 			Ok(Event::MessageCreate(message)) => {
 				println!("Message create event received");
 				if !message.content.starts_with(PREFIX) {
+					if (message.content.to_uppercase().starts_with("YAPAY ZEKA DEVREYE")) {
+						discord.send_message(message.channel_id, "tamam abi", "", false);
+					}
 					store(SkyNetMsg(message));
 				} else {
 					// You can send command like !skynet stalk @someone
@@ -59,10 +62,17 @@ fn main() {
 						command if command.starts_with(format!("{} stalk", PREFIX).as_str()) => {
 							print!("stalking");
 						},
+						command if command.starts_with(format!("{} say", PREFIX).as_str()) => {
+							discord.delete_message(message.channel_id, message.id);
+							let sentence = message.content.clone().split_off(format!("{} say ", PREFIX).len());
+							let _ = discord.send_message(message.channel_id, sentence.as_str(), "", false);
+						},
 						command if command.starts_with(format!("{} help", PREFIX).as_str()) => {
 							let _ = discord.send_message(message.channel_id, "You can use stalk command", "", false);
-						}
-						_ => println!("Unknown command, type !skynet help to see help")
+						},
+						_ => {
+							let _ = discord.send_message(message.channel_id, "Unknown command, type !skynet help to see help", "", false);
+						},
 					};
 				}
 			}
@@ -103,17 +113,15 @@ fn main() {
 				});
 
 				if let Some(msg) = store.cache_get(&msg) {
-					if msg.0.author.bot {
-						return ();
+					if !msg.0.author.bot {
+						let sinirlendirdin_beni_ibne =
+							format!("<@!{}> dedi ki:\n{}", msg.0.author.id, msg.0.content.as_str());
+						let _ = discord.send_message(
+							msg.0.channel_id,
+							sinirlendirdin_beni_ibne.as_str(),
+							"",
+							false);
 					}
-
-					let sinirlendirdin_beni_ibne =
-						format!("<@!{}> dedi ki:\n{}", msg.0.author.id, msg.0.content.as_str());
-					let _ = discord.send_message(
-						msg.0.channel_id,
-						sinirlendirdin_beni_ibne.as_str(),
-						"",
-						false);
 				}
 			}
 			Ok(_) => {}
