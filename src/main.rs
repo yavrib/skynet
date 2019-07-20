@@ -2,79 +2,23 @@
 extern crate cached;
 
 pub mod meme_loader;
+pub mod skynetmsg;
 
 use discord::Discord;
 use discord::model::*;
 use std::env;
-use cached::{SizedCache, Cached};
-use std::hash::{Hash, Hasher};
-use serde_json::Value;
+use cached::{SizedCache, TimedCache, Cached};
 use std::collections::HashMap;
 use std::fs::File;
 use rand::Rng;
 use std::sync::Arc;
 use std::rc::Rc;
 use std::cell::RefCell;
+use skynetmsg::SkyNetMsg;
 
-
-#[derive(Debug, Clone)]
-pub struct SkyNetMsg{
-	msg: Message,
-	history: Vec<SkyNetMsg>
-}
-
-impl Default for SkyNetMsg {
-	fn default() -> Self {
-		let fake_author: User = User {
-			id: UserId(123_u64),
-			name: String::new(),
-			discriminator: 1,
-			avatar: None,
-			bot: false,
-		};
-
-		SkyNetMsg {
-			msg: Message {
-				channel_id: ChannelId(0_u64),
-				id: MessageId(0_u64),
-				content: String::new(),
-				nonce: None,
-				tts: false,
-				timestamp: String::new(),
-				edited_timestamp: None,
-				pinned: false,
-				kind: MessageType::Regular,
-
-				author: fake_author,
-				mention_everyone: false,
-				mentions: Vec::<User>::new(),
-				mention_roles: Vec::<RoleId>::new(),
-				reactions: Vec::<MessageReaction>::new(),
-
-				attachments: Vec::<Attachment>::new(),
-				/// Follows OEmbed standard
-				embeds: Vec::<Value>::new(),
-			},
-			history: Vec::new()
-		}
-	}
-}
-
-impl Eq for SkyNetMsg {}
-impl Hash for SkyNetMsg {
-	fn hash<H: Hasher>(&self, state: &mut H) {
-		self.msg.id.hash(state);
-		self.msg.channel_id.hash(state);
-		// These are enough don't hash the [content].
-		// or any other shit here
-	}
-}
-
-impl PartialEq for SkyNetMsg {
-	fn eq(&self, other: &Self) -> bool {
-		self.msg.id == other.msg.id &&
-			self.msg.channel_id == other.msg.channel_id
-	}
+cached!{
+    EMBESIL_STORE: TimedCache<SkyNetMsg, SkyNetMsg> = TimedCache::with_lifespan(10_u64);
+    fn embesil(msg: SkyNetMsg) -> SkyNetMsg = { msg }
 }
 
 cached!{
@@ -221,6 +165,7 @@ fn main() {
 
 				if let Some(msg) = kache.cache_get(&msg) {
 					if !msg.msg.author.bot {
+						let es = EMBESIL_STORE.lock().unwrap();
 						let sinirlendirdin_beni_ibne =
 							format!("<@!{}> dedi ki:\n{}", msg.msg.author.id, msg.msg.content.as_str());
 						let _ = discord.send_message(
