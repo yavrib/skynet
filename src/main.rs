@@ -30,6 +30,13 @@ cached!{
     fn store(msg: SkyNetMsg) -> SkyNetMsg = { msg }
 }
 
+cached!{
+    BOT_MSG_STORE: SizedCache<SkyNetMsg, SkyNetMsg> = SizedCache::with_size(65536_usize);
+    // STALKED_USER: SizedCache<User, User> = SizedCache::with_size(1024_usize);
+    // fn stalk(user: User) -> User { user };
+    fn store_bot_message(msg: SkyNetMsg) -> SkyNetMsg = { msg }
+}
+
 const PREFIX: &str = "!skynet";
 
 fn main() {
@@ -58,12 +65,21 @@ fn main() {
 					} else if message.content.starts_with("09") {
 						discord.send_message(message.channel_id, "HADİ SİK ONU GÖTÜNDEN", "", false);
 					}
-					store(SkyNetMsg{
-						msg: Message {
-							..message
-						},
-						..Default::default()
-					});
+
+					match message.author.bot {
+						false => store(SkyNetMsg{
+							msg: Message {
+								..message
+							},
+							..Default::default()
+						}),
+						true => store_bot_message(SkyNetMsg{
+							msg: Message {
+								..message
+							},
+							..Default::default()
+						}),
+					};
 				} else {
 					// You can send command like !skynet stalk @someone
 					println!("{:?}", message);
@@ -159,9 +175,10 @@ fn main() {
 			},
 			Ok(Event::MessageDelete { channel_id, message_id }) => {
 				println!("Message delete event received");
-				println!("------Message Create Event START------");
+				println!("------Message Delete Event START------");
 				println!("{:?}", message_id);
 				let mut kache = MSG_STORE.lock().unwrap();
+				let mut bot_cache = BOT_MSG_STORE.lock().unwrap();
 
 				let fake_author: User = User {
 					id: UserId(123_u64),
@@ -175,10 +192,22 @@ fn main() {
 				msg.msg.channel_id = channel_id;
 				msg.msg.id = message_id;
 
+				if let Some(deleted_bot_message) = bot_cache.cache_get(&msg) {
+					println!("Deleted Bot Message Content");
+					println!("{:?}", deleted_bot_message);
+					println!("------Message Delete Event END------");
+					discord.send_message(
+						deleted_bot_message.msg.channel_id,
+						deleted_bot_message.msg.content.as_str(),
+						"",
+						false
+					);
+				}
+
 				if let Some(msg) = kache.cache_get(&msg) {
 					println!("Message Content");
 					println!("{:?}", msg);
-					println!("------Message Create Event END------");
+					println!("------Message Delete Event END------");
 
 					if !msg.msg.author.bot {
 						let mut es = EMBESIL_STORE.lock().unwrap();
