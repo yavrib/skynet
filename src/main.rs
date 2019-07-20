@@ -102,7 +102,11 @@ fn main() {
 		match connection.recv_event() {
 			Ok(Event::MessageCreate(message)) => {
 				println!("Message create event received");
+				println!("------Message Create Event START------");
+				println!("{:?}", message);
+				println!("------Message Create Event END------");
 				if !message.content.starts_with(PREFIX) {
+					println!("{:?}", message);
 					if message.content.to_uppercase().starts_with("YAPAY ZEKA DEVREYE") {
 						discord.send_message(message.channel_id, "tamam abi", "", false);
 					} else if message.content.starts_with("09") {
@@ -173,6 +177,10 @@ fn main() {
 				let updated_message =
 					discord.get_message(channel_id, id);
 
+				println!("------Message Update Event START------");
+				println!("{:?}", updated_message);
+				println!("------Message Update Event END------");
+
 				if let Some(msg) = optional_msg.clone() {
 					{
 						kache.cache_remove(&def);
@@ -184,7 +192,7 @@ fn main() {
 					drop(kache);
 					store(defclone);
 
-					if !msg.msg.author.bot {
+					if !msg.msg.author.bot && msg.msg.content != def.msg.content {
 						history_clone.push(msg.clone());
 						let mesajlar = history_clone
 							.iter()
@@ -205,6 +213,8 @@ fn main() {
 			},
 			Ok(Event::MessageDelete { channel_id, message_id }) => {
 				println!("Message delete event received");
+				println!("------Message Create Event START------");
+				println!("{:?}", message_id);
 				let mut kache = MSG_STORE.lock().unwrap();
 
 				let fake_author: User = User {
@@ -220,6 +230,10 @@ fn main() {
 				msg.msg.id = message_id;
 
 				if let Some(msg) = kache.cache_get(&msg) {
+					println!("Message Content");
+					println!("{:?}", msg);
+					println!("------Message Create Event END------");
+
 					if !msg.msg.author.bot {
 						let sinirlendirdin_beni_ibne =
 							format!("<@!{}> dedi ki:\n{}", msg.msg.author.id, msg.msg.content.as_str());
