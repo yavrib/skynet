@@ -11,6 +11,8 @@ use std::hash::{Hash, Hasher};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fs::File;
+use rand::Rng;
+
 
 #[derive(Debug, Clone)]
 pub struct SkyNetMsg{
@@ -123,8 +125,11 @@ fn main() {
 							discord.delete_message(message.channel_id, message.id);
 							let sentence = message.content.clone().split_off(format!("{} meme ", PREFIX).len());
 							let pf = memes.get(sentence.as_str());
-							let fe = pf.unwrap().file_name().unwrap().to_str().unwrap();
-							let file = File::open(pf.unwrap()).unwrap();
+							let meme_list = pf.unwrap();
+							let num = rand::thread_rng().gen_range(0, meme_list.len());
+							let file_to_send = meme_list.get(num).unwrap();
+							let fe = file_to_send.file_name().unwrap().to_str().unwrap();
+							let file = File::open(file_to_send).unwrap();
 							let _ = discord.send_file(message.channel_id, "", file, fe);
 						},
 						command if command.starts_with(format!("{} help", PREFIX).as_str()) => {

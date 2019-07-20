@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::collections::HashMap;
 
 
-pub fn load(mut memes: HashMap<String, PathBuf>) -> HashMap<String, PathBuf> {
+pub fn load(mut memes: HashMap<String, Vec<PathBuf>>) -> HashMap<String, Vec<PathBuf>> {
     for entry in fs::read_dir("./memes").unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
@@ -14,7 +14,11 @@ pub fn load(mut memes: HashMap<String, PathBuf>) -> HashMap<String, PathBuf> {
             let memepath = meme.path();
             if let Some(message) = ptk.file_name().unwrap().to_str() {
                 println!("keyword {:?}, meme url {:?}", message, meme);
-                memes.insert(String::from(message), memepath.clone());
+                let mut kl = memes.clone();
+                let mut empty = Vec::<PathBuf>::new();
+                let mut meme_list = kl.get_mut(String::from(message).as_str()).unwrap_or(&mut empty);
+                meme_list.push(memepath.clone());
+                memes.insert(String::from(message), meme_list.clone());
             }
         }
     }
