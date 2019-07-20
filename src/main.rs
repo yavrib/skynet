@@ -29,7 +29,7 @@ impl PartialEq for SkyNetMsg {
 }
 
 cached!{
-    MSG_STORE: SizedCache<SkyNetMsg, SkyNetMsg> = SizedCache::with_size(50);
+    MSG_STORE: SizedCache<SkyNetMsg, SkyNetMsg> = SizedCache::with_size(1024_usize);
     fn store(msg: SkyNetMsg) -> SkyNetMsg = { msg }
 }
 
