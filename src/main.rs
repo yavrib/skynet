@@ -82,7 +82,7 @@ const PREFIX: &str = "!skynet";
 
 fn main() {
 	let mut memes = HashMap::new();
-	meme_loader::load(&mut memes);
+	meme_loader::load(memes);
 	// Log in to Discord using a bot token from the environment
 	let discord = Discord::from_bot_token(
 		&env::var("DISCORD_TOKEN").expect("Expected token"),

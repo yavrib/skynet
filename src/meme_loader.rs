@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::collections::HashMap;
 
 
-pub fn load<'pipi>(mut memes: &'pipi mut HashMap<&'static str, PathBuf>) -> &'pipi HashMap<&'static str, PathBuf> {
+pub fn load(mut memes: HashMap<String, PathBuf>) -> HashMap<String, PathBuf> {
     for entry in fs::read_dir("./memes").unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
@@ -14,10 +14,10 @@ pub fn load<'pipi>(mut memes: &'pipi mut HashMap<&'static str, PathBuf>) -> &'pi
             let memepath = meme.path();
             if let Some(message) = ptk.file_name().unwrap().to_str() {
                 println!("keyword {:?}, meme url {:?}", message, meme);
-                memes.insert(message.clone(), memepath.clone());
+                memes.insert(String::from(message), memepath.clone());
             }
         }
     }
 
-    memes
+    memes.clone()
 }
