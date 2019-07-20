@@ -30,8 +30,12 @@ impl PartialEq for SkyNetMsg {
 
 cached!{
     MSG_STORE: SizedCache<SkyNetMsg, SkyNetMsg> = SizedCache::with_size(1024_usize);
+    // STALKED_USER: SizedCache<User, User> = SizedCache::with_size(1024_usize);
+    // fn stalk(user: User) -> User { user };
     fn store(msg: SkyNetMsg) -> SkyNetMsg = { msg }
 }
+
+const PREFIX: &str = "!skynet";
 
 fn main() {
 	// Log in to Discord using a bot token from the environment
@@ -45,9 +49,25 @@ fn main() {
 	loop {
 		match connection.recv_event() {
 			Ok(Event::MessageCreate(message)) => {
-				store(SkyNetMsg(message));
+				println!("Message create event received");
+				if !message.content.starts_with(PREFIX) {
+					store(SkyNetMsg(message));
+				} else {
+					// You can send command like !skynet stalk @someone
+					println!("{:?}", message);
+					match &message.content {
+						command if command.starts_with(format!("{} stalk", PREFIX).as_str()) => {
+							print!("stalking");
+						},
+						command if command.starts_with(format!("{} help", PREFIX).as_str()) => {
+							let _ = discord.send_message(message.channel_id, "You can use stalk command", "", false);
+						}
+						_ => println!("Unknown command, type !skynet help to see help")
+					};
+				}
 			}
 			Ok(Event::MessageDelete { channel_id, message_id }) => {
+				println!("Message delete event received");
 				let mut store = MSG_STORE.lock().unwrap();
 
 				let fake_author: User = User {
@@ -83,15 +103,17 @@ fn main() {
 				});
 
 				if let Some(msg) = store.cache_get(&msg) {
-					if !msg.0.author.bot {
-						let sinirlendirdin_beni_ibne =
-							format!("<@!{}> dedi ki:\n{}", msg.0.author.id, msg.0.content.as_str());
-						let _ = discord.send_message(
-							msg.0.channel_id,
-							sinirlendirdin_beni_ibne.as_str(),
-							"",
-							false);
+					if msg.0.author.bot {
+						return ();
 					}
+
+					let sinirlendirdin_beni_ibne =
+						format!("<@!{}> dedi ki:\n{}", msg.0.author.id, msg.0.content.as_str());
+					let _ = discord.send_message(
+						msg.0.channel_id,
+						sinirlendirdin_beni_ibne.as_str(),
+						"",
+						false);
 				}
 			}
 			Ok(_) => {}
