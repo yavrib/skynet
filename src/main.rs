@@ -12,6 +12,9 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::fs::File;
 use rand::Rng;
+use std::sync::Arc;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 
 #[derive(Debug, Clone)]
@@ -94,6 +97,7 @@ fn main() {
 	// Establish and use a websocket connection
 	let (mut connection, _) = discord.connect().expect("connect failed");
 	println!("Ready.");
+//	discord.send_message(message.channel_id, "Ben geldim ibneler...", "", false);
 	loop {
 		match connection.recv_event() {
 			Ok(Event::MessageCreate(message)) => {
@@ -144,15 +148,44 @@ fn main() {
 				}
 			}
 			Ok(Event::MessageUpdate { id, kind, content, nonce, author, mentions, mention_roles, channel_id, .. }) => {
-				let updated_message = discord.get_message(channel_id, id);
 				let mut def = SkyNetMsg::default();
-				let mut kache = MSG_STORE.lock().unwrap();
-				let optional_msg = kache.cache_get(&def);
+				def.msg.id = id;
+				def.msg.channel_id = channel_id;
 
-				if let Some(msg) = optional_msg {
+				let mut kache = MSG_STORE.lock().unwrap();
+				let mut optional_msg = kache.cache_get(&def).cloned();
+
+				let updated_message =
+					discord.get_message(channel_id, id);
+
+				if let Some(msg) = optional_msg.clone() {
+					{
+						kache.cache_remove(&def);
+					}
 					def.history.push(msg.clone());
 					def.msg = updated_message.unwrap();
-					store(def);
+					let mut history_clone = def.history.clone();
+					let defclone = def.clone();
+					drop(kache);
+					store(defclone);
+
+					if !msg.msg.author.bot {
+						history_clone.push(msg.clone());
+						let mesajlar = history_clone
+							.iter()
+							.map(|m| format!("{}", m.msg.content.as_str()))
+							.collect::<Vec<String>>()
+							.join("\n");
+
+
+						let sinirlendirdin_beni_ibne =
+							format!("<@!{}> editleyip dedi ki:\n{}", msg.msg.author.id, mesajlar);
+						let _ = discord.send_message(
+							msg.msg.channel_id,
+							sinirlendirdin_beni_ibne.as_str(),
+							"",
+							false);
+					}
 				}
 			},
 			Ok(Event::MessageDelete { channel_id, message_id }) => {

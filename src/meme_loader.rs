@@ -16,7 +16,7 @@ pub fn load(mut memes: HashMap<String, Vec<PathBuf>>) -> HashMap<String, Vec<Pat
                 println!("keyword {:?}, meme url {:?}", message, meme);
                 let mut kl = memes.clone();
                 let mut empty = Vec::<PathBuf>::new();
-                let mut meme_list = kl.get_mut(String::from(message).as_str()).unwrap_or(&mut empty);
+                let meme_list = kl.get_mut(String::from(message).as_str()).unwrap_or(&mut empty);
                 meme_list.push(memepath.clone());
                 memes.insert(String::from(message), meme_list.clone());
             }
