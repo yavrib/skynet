@@ -10,6 +10,7 @@ use cached::{SizedCache, Cached};
 use std::hash::{Hash, Hasher};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::fs::File;
 
 #[derive(Debug, Clone)]
 pub struct SkyNetMsg{
@@ -82,7 +83,7 @@ const PREFIX: &str = "!skynet";
 
 fn main() {
 	let mut memes = HashMap::new();
-	meme_loader::load(memes);
+	memes = meme_loader::load(memes);
 	// Log in to Discord using a bot token from the environment
 	let discord = Discord::from_bot_token(
 		&env::var("DISCORD_TOKEN").expect("Expected token"),
@@ -117,11 +118,21 @@ fn main() {
 							let sentence = message.content.clone().split_off(format!("{} say ", PREFIX).len());
 							let _ = discord.send_message(message.channel_id, sentence.as_str(), "", false);
 						},
+						command if command.starts_with(format!("{} meme", PREFIX).as_str()) => {
+							println!("MEME");
+							discord.delete_message(message.channel_id, message.id);
+							let sentence = message.content.clone().split_off(format!("{} meme ", PREFIX).len());
+							let pf = memes.get(sentence.as_str());
+							let fe = pf.unwrap().file_name().unwrap().to_str().unwrap();
+							let file = File::open(pf.unwrap()).unwrap();
+							let _ = discord.send_file(message.channel_id, "", file, fe);
+						},
 						command if command.starts_with(format!("{} help", PREFIX).as_str()) => {
 							let _ = discord.send_message(message.channel_id, "You can use stalk command", "", false);
 						},
-						_ => {
-							let _ = discord.send_message(message.channel_id, "Unknown command, type !skynet help to see help", "", false);
+						rest => {
+							let msg = format!("Unknown command {}, type !skynet help to see help", rest);
+							let _ = discord.send_message(message.channel_id, msg.as_str(), "", false);
 						},
 					};
 				}
