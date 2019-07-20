@@ -7,9 +7,10 @@ pub mod skynetusr;
 
 use discord::Discord;
 use discord::model::*;
+use discord::builders::*;
 use std::env;
 use cached::{SizedCache, TimedCache, Cached};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use rand::Rng;
 use std::sync::Arc;
@@ -17,6 +18,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use skynetmsg::SkyNetMsg;
 use skynetusr::SkyNetUsr;
+use rand::seq::SliceRandom;
 
 cached!{
     EMBESIL_STORE: TimedCache<SkyNetUsr, SkyNetUsr> = TimedCache::with_lifespan(10_u64);
@@ -75,6 +77,48 @@ fn main() {
 							discord.delete_message(message.channel_id, message.id);
 							let sentence = message.content.clone().split_off(format!("{} say ", PREFIX).len());
 							let _ = discord.send_message(message.channel_id, sentence.as_str(), "", false);
+						},
+						command if command.starts_with(format!("{} rulet", PREFIX).as_str()) => {
+							let mut kache = MSG_STORE.lock().unwrap();
+							let mut def = SkyNetMsg::default();
+							def.msg.id = message.id;
+							def.msg.channel_id = message.channel_id;
+							let mut possible_users = HashSet::new();
+							for i in kache.key_order() {
+								possible_users.insert(SkyNetUsr{ usr: i.msg.author.clone()});
+							}
+
+							let mut rng = rand::thread_rng();
+							let mut peeps = Vec::new();
+							peeps.extend(possible_users.into_iter());
+							peeps.shuffle(&mut rng);
+							let lucky_bastard: SkyNetUsr = peeps.pop().unwrap();
+
+							let servers = discord.get_servers().unwrap();
+							// one and only one
+							let server_info = servers.first().unwrap();
+
+							discord.send_message(message.channel_id,
+							format!("Günün şanslısı sen seçildin <@!{}> ⊂(◉‿◉)つ", lucky_bastard.usr.id).as_str(),
+								"",
+								false
+							);
+
+							// ezik
+							discord.edit_member(server_info.clone().id,
+												lucky_bastard.usr.id,
+												|em| {
+													EditMember::nickname(em, "EZIK")
+												}
+							);
+
+							// sagir
+							discord.edit_member(server_info.clone().id,
+												lucky_bastard.usr.id,
+								|em| {
+									EditMember::deaf(em, true)
+								}
+							);
 						},
 						command if command.starts_with(format!("{} rulet", PREFIX).as_str()) => {
 							let sentence = message.content
