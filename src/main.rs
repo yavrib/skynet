@@ -83,13 +83,15 @@ fn main() {
 				});
 
 				if let Some(msg) = store.cache_get(&msg) {
-					let sinirlendirdin_beni_ibne =
-						format!("<@!{}> dedi ki:\n{}", msg.0.author.id, msg.0.content.as_str());
-					let _ = discord.send_message(
-						msg.0.channel_id,
-						sinirlendirdin_beni_ibne.as_str(),
-						"",
-						false);
+					if !msg.0.author.bot {
+						let sinirlendirdin_beni_ibne =
+							format!("<@!{}> dedi ki:\n{}", msg.0.author.id, msg.0.content.as_str());
+						let _ = discord.send_message(
+							msg.0.channel_id,
+							sinirlendirdin_beni_ibne.as_str(),
+							"",
+							false);
+					}
 				}
 			}
 			Ok(_) => {}
