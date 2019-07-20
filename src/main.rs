@@ -3,6 +3,7 @@ extern crate cached;
 
 pub mod meme_loader;
 pub mod skynetmsg;
+pub mod skynetusr;
 
 use discord::Discord;
 use discord::model::*;
@@ -15,10 +16,11 @@ use std::sync::Arc;
 use std::rc::Rc;
 use std::cell::RefCell;
 use skynetmsg::SkyNetMsg;
+use skynetusr::SkyNetUsr;
 
 cached!{
-    EMBESIL_STORE: TimedCache<SkyNetMsg, SkyNetMsg> = TimedCache::with_lifespan(10_u64);
-    fn embesil(msg: SkyNetMsg) -> SkyNetMsg = { msg }
+    EMBESIL_STORE: TimedCache<SkyNetUsr, SkyNetUsr> = TimedCache::with_lifespan(10_u64);
+    fn embesil(usr: SkyNetUsr) -> SkyNetUsr = { usr }
 }
 
 cached!{
@@ -179,7 +181,30 @@ fn main() {
 					println!("------Message Create Event END------");
 
 					if !msg.msg.author.bot {
-						let es = EMBESIL_STORE.lock().unwrap();
+						let mut es = EMBESIL_STORE.lock().unwrap();
+
+						// insert the embesil over here
+						let embesil_user = SkyNetUsr {
+							usr: msg.clone().msg.author
+						};
+
+						if let Some(dumb_fuck) = es.cache_get(&embesil_user.clone()) {
+							let priv_chan =
+								discord.create_private_channel(dumb_fuck.clone().usr.id).unwrap();
+
+							for _ in 1..=10 {
+								discord.send_message(
+									priv_chan.id,
+									"Silme Hayvan!",
+									"",
+									false
+								);
+							}
+						}
+
+						drop(es);
+						embesil(embesil_user);
+
 						let sinirlendirdin_beni_ibne =
 							format!("<@!{}> dedi ki:\n{}", msg.msg.author.id, msg.msg.content.as_str());
 						let _ = discord.send_message(
