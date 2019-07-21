@@ -19,6 +19,9 @@ use std::cell::RefCell;
 use skynetmsg::SkyNetMsg;
 use skynetusr::SkyNetUsr;
 use rand::seq::SliceRandom;
+use bastion::bastion::Bastion;
+use bastion::context::BastionContext;
+use bastion::child::{Message as BMessage} ;
 
 cached!{
     EMBESIL_STORE: TimedCache<SkyNetUsr, SkyNetUsr> = TimedCache::with_lifespan(10_u64);
@@ -42,6 +45,22 @@ cached!{
 const PREFIX: &str = "!skynet";
 
 fn main() {
+	Bastion::platform();
+
+	Bastion::spawn(
+		|context: BastionContext, msg: Box<dyn BMessage>| {
+			client_implementation();
+
+			// Rebind to the system
+			context.hook();
+		},
+		"",
+	);
+
+	Bastion::start()
+}
+
+fn client_implementation() {
 	let mut memes = HashMap::new();
 	memes = meme_loader::load(memes);
 	// Log in to Discord using a bot token from the environment
