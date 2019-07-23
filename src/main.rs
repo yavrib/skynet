@@ -85,6 +85,17 @@ fn client_implementation() {
 						discord.send_message(message.channel_id, "tamam abi", "", false);
 					} else if message.content.starts_with("09") {
 						discord.send_message(message.channel_id, "HADİ SİK ONU GÖTÜNDEN", "", false);
+					} else if message.content.ends_with("?") {
+						let yanitlar: Vec<&str> = vec![
+							"Eski sevgilim......",
+							"Cinsel hayatım......",
+							"\"b\"+\"a\"+ +\"a\"+\"a\"",
+							"Sağ elim......",
+							"Gelmeyen maaşım......"
+						];
+						let num = rand::thread_rng().gen_range(0, yanitlar.len());
+						let b = *yanitlar.get(num).unwrap();
+						discord.send_message(message.channel_id, b, "", false);
 					}
 
 					match message.author.bot {
