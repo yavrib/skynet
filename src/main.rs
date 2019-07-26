@@ -85,17 +85,11 @@ fn client_implementation() {
 						discord.send_message(message.channel_id, "tamam abi", "", false);
 					} else if message.content.starts_with("09") {
 						discord.send_message(message.channel_id, "HADİ SİK ONU GÖTÜNDEN", "", false);
-					} else if message.content.ends_with("?") {
-						let yanitlar: Vec<&str> = vec![
-							"Eski sevgilim......",
-							"Cinsel hayatım......",
-							"\"b\"+\"a\"+ +\"a\"+\"a\"",
-							"Sağ elim......",
-							"Gelmeyen maaşım......"
-						];
-						let num = rand::thread_rng().gen_range(0, yanitlar.len());
-						let b = *yanitlar.get(num).unwrap();
-						discord.send_message(message.channel_id, b, "", false);
+					} else if message.content.to_lowercase().contains("ironi") ||
+						message.content.to_uppercase().contains("IRONI") {
+						if !message.author.bot {
+							discord.send_message(message.channel_id, "Evet ironik bir malsın", "", false);
+						}
 					}
 
 					match message.author.bot {
@@ -118,6 +112,16 @@ fn client_implementation() {
 					match &message.content {
 						command if command.starts_with(format!("{} stalk", PREFIX).as_str()) => {
 							print!("stalking");
+						},
+						command if command.starts_with(format!("{} cleanmebeybi", PREFIX).as_str()) => {
+							print!("cleaning");
+							let mut kache = MSG_STORE.lock().unwrap();
+							for m in kache.key_order() {
+								if m.msg.author.bot {
+									let mut def = SkyNetMsg::default();
+									let _ = discord.delete_message(m.msg.channel_id, m.msg.id);
+								}
+							}
 						},
 						command if command.starts_with(format!("{} say", PREFIX).as_str()) => {
 							discord.delete_message(message.channel_id, message.id);
