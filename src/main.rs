@@ -1,9 +1,13 @@
 #[macro_use]
 extern crate cached;
 
+use std::error::Error;
+use std::io::Read;
+
 pub mod meme_loader;
 pub mod skynetmsg;
 pub mod skynetusr;
+pub mod hypers;
 
 use discord::Discord;
 use discord::model::*;
@@ -13,7 +17,8 @@ use cached::{SizedCache, TimedCache, Cached};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use rand::Rng;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::rc::Rc;
 use std::cell::RefCell;
 use skynetmsg::SkyNetMsg;
@@ -22,6 +27,8 @@ use rand::seq::SliceRandom;
 use bastion::bastion::Bastion;
 use bastion::context::BastionContext;
 use bastion::child::{Message as BMessage} ;
+use bastion::supervisor::SupervisionStrategy;
+use crate::hypers::HyperUsers;
 
 cached!{
     EMBESIL_STORE: TimedCache<SkyNetUsr, SkyNetUsr> = TimedCache::with_lifespan(10_u64);
@@ -47,20 +54,31 @@ const PREFIX: &str = "!skynet";
 fn main() {
 	Bastion::platform();
 
-	Bastion::spawn(
-		|context: BastionContext, msg: Box<dyn BMessage>| {
-			client_implementation();
+	let scale = 1;
+
+	Bastion::supervisor("skynet", "system")
+		.strategy(SupervisionStrategy::OneForOne)
+		.children(|context: BastionContext, msg: Box<dyn BMessage>| {
+			let mut file = File::open("hyperusers.json").unwrap();
+			let mut contents = String::new();
+			file.read_to_string(&mut contents).unwrap();
+
+			let hypers: HyperUsers = HyperUsers {
+				hypers: vec!["548224010916331520", "243377404125380608"]
+			};
+			let msgsem = AtomicUsize::new(0);
+
+			client_implementation(hypers, msgsem);
 
 			// Rebind to the system
 			context.hook();
-		},
-		"",
-	);
+		}, "", scale)
+		.launch();
 
 	Bastion::start()
 }
 
-fn client_implementation() {
+fn client_implementation(hypers: HyperUsers, msgsem: AtomicUsize) {
 	let mut memes = HashMap::new();
 	memes = meme_loader::load(memes);
 	// Log in to Discord using a bot token from the environment
@@ -108,19 +126,28 @@ fn client_implementation() {
 					};
 				} else {
 					// You can send command like !skynet stalk @someone
-					println!("{:?}", message);
+					println!("INCOMING {:?}", message);
 					match &message.content {
 						command if command.starts_with(format!("{} stalk", PREFIX).as_str()) => {
-							print!("stalking");
+							println!("stalking");
 						},
 						command if command.starts_with(format!("{} cleanmebeybi", PREFIX).as_str()) => {
-							print!("cleaning");
-							let mut kache = MSG_STORE.lock().unwrap();
-							for m in kache.key_order() {
-								if m.msg.author.bot {
-									let mut def = SkyNetMsg::default();
-									let _ = discord.delete_message(m.msg.channel_id, m.msg.id);
+							println!("cleaning");
+							let mut kache = BOT_MSG_STORE.lock().unwrap();
+							println!("HYPERS {:?}", hypers);
+							if hypers.hypers.contains(&message.author.id.0.to_string().as_str()) {
+								for m in kache.key_order() {
+									if m.msg.author.bot {
+										msgsem.store(m.msg.id.0 as usize, Ordering::Relaxed);
+										let _ = discord.delete_message(m.msg.channel_id, m.msg.id);
+									}
 								}
+							} else {
+								discord.send_message(message.channel_id,
+													 format!("You have no power here <@!{}> ( ︶︿︶)_╭∩╮", message.author.id).as_str(),
+													 "",
+													 false
+								);
 							}
 						},
 						command if command.starts_with(format!("{} say", PREFIX).as_str()) => {
@@ -129,46 +156,54 @@ fn client_implementation() {
 							let _ = discord.send_message(message.channel_id, sentence.as_str(), "", false);
 						},
 						command if command.starts_with(format!("{} rulet", PREFIX).as_str()) => {
-							let mut kache = MSG_STORE.lock().unwrap();
-							let mut def = SkyNetMsg::default();
-							def.msg.id = message.id;
-							def.msg.channel_id = message.channel_id;
-							let mut possible_users = HashSet::new();
-							for i in kache.key_order() {
-								possible_users.insert(SkyNetUsr{ usr: i.msg.author.clone()});
-							}
-
-							let mut rng = rand::thread_rng();
-							let mut peeps = Vec::new();
-							peeps.extend(possible_users.into_iter());
-							peeps.shuffle(&mut rng);
-							let lucky_bastard: SkyNetUsr = peeps.pop().unwrap();
-
-							let servers = discord.get_servers().unwrap();
-							// one and only one
-							let server_info = servers.first().unwrap();
-
-							discord.send_message(message.channel_id,
-							format!("Günün şanslısı sen seçildin <@!{}> ⊂(◉‿◉)つ", lucky_bastard.usr.id).as_str(),
-								"",
-								false
-							);
-
-							// ezik
-							discord.edit_member(server_info.clone().id,
-												lucky_bastard.usr.id,
-												|em| {
-													EditMember::nickname(em, "EZIK")
-												}
-							);
-
-							// sagir
-							discord.edit_member(server_info.clone().id,
-												lucky_bastard.usr.id,
-								|em| {
-									EditMember::deaf(em, true)
+							if hypers.hypers.contains(&message.author.id.0.to_string().as_str()) {
+								let mut kache = MSG_STORE.lock().unwrap();
+								let mut def = SkyNetMsg::default();
+								def.msg.id = message.id;
+								def.msg.channel_id = message.channel_id;
+								let mut possible_users = HashSet::new();
+								for i in kache.key_order() {
+									possible_users.insert(SkyNetUsr { usr: i.msg.author.clone() });
 								}
-							);
+
+								let mut rng = rand::thread_rng();
+								let mut peeps = Vec::new();
+								peeps.extend(possible_users.into_iter());
+								peeps.shuffle(&mut rng);
+								let lucky_bastard: SkyNetUsr = peeps.pop().unwrap();
+
+								let servers = discord.get_servers().unwrap();
+								// one and only one
+								let server_info = servers.first().unwrap();
+
+								discord.send_message(message.channel_id,
+													 format!("Günün şanslısı sen seçildin <@!{}> ⊂(◉‿◉)つ", lucky_bastard.usr.id).as_str(),
+													 "",
+													 false
+								);
+
+								// ezik
+								discord.edit_member(server_info.clone().id,
+													lucky_bastard.usr.id,
+													|em| {
+														EditMember::nickname(em, "EZIK")
+													}
+								);
+
+								// sagir
+								discord.edit_member(server_info.clone().id,
+													lucky_bastard.usr.id,
+													|em| {
+														EditMember::deaf(em, true)
+													}
+								);
+							} else {
+								discord.send_message(message.channel_id,
+													 format!("You have no power here <@!{}> ( ︶︿︶)_╭∩╮", message.author.id).as_str(),
+													 "",
+													 false
+								);
+							}
 						},
 						command if command.starts_with(format!("{} rulet", PREFIX).as_str()) => {
 							let sentence = message.content
@@ -274,12 +309,14 @@ fn client_implementation() {
 					println!("Deleted Bot Message Content");
 					println!("{:?}", deleted_bot_message);
 					println!("------Message Delete Event END------");
-					discord.send_message(
-						deleted_bot_message.msg.channel_id,
-						deleted_bot_message.msg.content.as_str(),
-						"",
-						false
-					);
+					if msgsem.load(Ordering::Relaxed) == deleted_bot_message.msg.id.0 as usize {
+						discord.send_message(
+							deleted_bot_message.msg.channel_id,
+							deleted_bot_message.msg.content.as_str(),
+							"",
+							false
+						);
+					}
 				}
 
 				if let Some(msg) = kache.cache_get(&msg) {

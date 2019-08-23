@@ -1,6 +1,6 @@
 use discord::model::*;
 use std::hash::{Hasher, Hash};
-use serde_json::Value;
+use serde_json::value::Value;
 
 #[derive(Debug, Clone)]
 pub struct SkyNetMsg{
